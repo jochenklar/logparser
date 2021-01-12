@@ -34,7 +34,7 @@ def main():
     for log_line in read_log_lines(settings.INPUT_PATH):
         match = parse_log_line(log_line)
         if match:
-            row = OrderedDict()
+            row = {}
             row['sha1'] = get_hash(log_line)
             row['host'] = settings.HOST
             row['date'] = parse_date(match)
@@ -44,7 +44,6 @@ def main():
             row['referrer_scheme'], row['referrer_host'], row['referrer_path'], row['referrer_query'] = parse_referrer(match)
             row['agent'] = parse_agent(match)
             row['country'] = parse_country(match, settings.GEOIP2_READER)
-
             rows.append(row)
 
     if settings.FORMAT == 'json':

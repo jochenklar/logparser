@@ -149,5 +149,9 @@ def write_sql(rows, database_settings):
 
         records.append(Record(**row))
 
+        if len(records) >= 100000:
+            session.bulk_save_objects(records)
+            records = []
+
     session.bulk_save_objects(records)
     session.commit()
