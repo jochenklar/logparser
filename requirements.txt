@@ -1,0 +1,3 @@
+geoip2
+python-dotenv
+SQLAlchemy
