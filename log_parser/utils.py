@@ -10,13 +10,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from geoip2.errors import AddressNotFoundError
-from sqlalchemy import (BigInteger, Column, Date, Integer, String, Text,
-                        create_engine)
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-Base = declarative_base()
+from .models import Base, Record
 
 logger = logging.getLogger(__name__)
 
@@ -39,30 +36,7 @@ time_format = "%d/%b/%Y:%H:%M:%S %z"
 
 request_pattern = re.compile(r'(?P<method>[A-Z-]+) (?P<request>.*?) HTTP/(?P<http_version>.*)')
 
-
-class Record(Base):
-
-    __tablename__ = 'records'
-
-    id = Column(BigInteger().with_variant(Integer, 'sqlite'), primary_key=True, autoincrement=True)
-    sha1 = Column(Text().with_variant(String(40), 'mysql'), nullable=False, index=True)
-    host = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    date = Column(Date, nullable=False, index=True)
-    method = Column(Text().with_variant(String(16), 'mysql'), index=True)
-    path = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    query = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    version = Column(Text().with_variant(String(4), 'mysql'), index=True)
-    status = Column(Integer, index=True)
-    size = Column(Integer, index=True)
-    referrer_scheme = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    referrer_host = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    referrer_path = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    referrer_query = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    agent = Column(Text().with_variant(String(384), 'mysql'), index=True)
-    country = Column(Text().with_variant(String(2), 'mysql'), index=True)
-
-    def __repr__(self):
-        return str(self.id)
+host_map = {}
 
 
 def read_log_lines(log_path):
@@ -129,11 +103,18 @@ def parse_agent(match):
 
 
 def parse_country(match, geoip2_reader):
-    try:
-        country_response = geoip2_reader.country(match.group('host'))
-        return country_response.country.iso_code.lower()
-    except (AddressNotFoundError, AttributeError):
-        return None
+    host = match.group('host')
+
+    if host in host_map:
+        return host_map[host]
+    else:
+        try:
+            country_response = geoip2_reader.country(match.group('host'))
+            host_map[host] = country_response.country.iso_code.lower()
+        except (AddressNotFoundError, AttributeError):
+            host_map[host] = None
+
+        return host_map[host]
 
 
 def write_csv(rows, output_path=None):
@@ -158,6 +139,7 @@ def write_sql(rows, database_settings):
     Session = sessionmaker(bind=engine)
     session = Session()
 
+    records = []
     for row in rows:
         if engine.driver in ['sqlite']:
             row['date'] = datetime.strptime(row['date'], '%Y-%m-%d')
@@ -165,10 +147,7 @@ def write_sql(rows, database_settings):
             for key in ['host', 'path', 'query', 'referrer_scheme', 'referrer_host', 'referrer_path', 'referrer_query', 'agent']:
                 row[key] = row[key][:384] if row.get(key) else row.get(key)
 
-        record = Record(**row)
-        session.add(record)
+        records.append(Record(**row))
 
-    try:
-        session.commit()
-    except IntegrityError as e:
-        logger.error(e)
+    session.bulk_save_objects(records)
+    session.commit()

@@ -49,9 +49,9 @@ optional arguments:
 
 The only mandatory argument is the `PATH` to the logfile to process. The optional arguments can be provided on the command line, but also:
 
-    * (in upper case) as environment variables, e.g. `FORMAT=csv`
-    * from `.env` file in the directory from where the script is called (with the same syntax)
-    * in a config file given by `--config-file`, or located at `log-parser.conf`, `~/.log-parser.conf`, or `/etc/log-parser.conf`.
+* (in upper case) as environment variables, e.g. `FORMAT=csv`
+* from `.env` file in the directory from where the script is called (with the same syntax)
+* in a config file given by `--config-file`, or located at `log-parser.conf`, `~/.log-parser.conf`, or `/etc/log-parser.conf`.
 
 In order to connect to a database connection string `DATABASE` has to be provided and `psycopg2-binary` or `mysqlclient` have to be installed.
 
