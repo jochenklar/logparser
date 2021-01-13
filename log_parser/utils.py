@@ -36,6 +36,8 @@ time_format = "%d/%b/%Y:%H:%M:%S %z"
 
 request_pattern = re.compile(r'(?P<method>[A-Z-]+) (?P<request>.*?) HTTP/(?P<http_version>.*)')
 
+bulk_save_chunk_size = 100000
+
 host_map = {}
 
 
@@ -149,7 +151,7 @@ def write_sql(rows, database_settings):
 
         records.append(Record(**row))
 
-        if len(records) >= 100000:
+        if len(records) >= bulk_save_chunk_size:
             session.bulk_save_objects(records)
             records = []
 

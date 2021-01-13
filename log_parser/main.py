@@ -1,5 +1,4 @@
 import argparse
-from collections import OrderedDict
 
 from .config import settings
 from .utils import (get_hash, parse_agent, parse_country, parse_date,
@@ -20,6 +19,10 @@ def main():
                         help='Database connection string, e.g. postgresql+psycopg2://username:password@host:port/dbname')
     parser.add_argument('--geoip2-database', dest='geoip2_database',
                         help='Path to the geoip2 database')
+    parser.add_argument('--ignore-host', dest='ignore_host', action='append',
+                        help='Host in the logs to be ignored, useful for internal ips, can be repeated')
+    parser.add_argument('--ignore-path', dest='ignore_path', action='append',
+                        help='Path in the logs to be ignored, useful for recurring API calls, can be repeated')
     parser.add_argument('--log-level', dest='log_level',
                         help='Log level (ERROR, WARN, INFO, or DEBUG)')
     parser.add_argument('--log-file', dest='log_file',
@@ -28,17 +31,28 @@ def main():
                         help='File path of the config file')
 
     args = parser.parse_args()
+
     settings.setup(args)
 
     rows = []
     for log_line in read_log_lines(settings.INPUT_PATH):
         match = parse_log_line(log_line)
         if match:
+            method, path, query, version = parse_request(match)
+
+            if settings.IGNORE_HOST and match.group('host') in settings.IGNORE_HOST:
+                continue
+            if settings.IGNORE_PATH and path in settings.IGNORE_PATH:
+                continue
+
             row = {}
             row['sha1'] = get_hash(log_line)
             row['host'] = settings.HOST
             row['date'] = parse_date(match)
-            row['method'], row['path'], row['query'], row['version'] = parse_request(match)
+            row['method'] = method
+            row['path'] = path
+            row['query'] = query
+            row['version'] = version
             row['status'] = parse_status(match)
             row['size'] = parse_size(match)
             row['referrer_scheme'], row['referrer_host'], row['referrer_path'], row['referrer_query'] = parse_referrer(match)

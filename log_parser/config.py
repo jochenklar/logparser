@@ -42,6 +42,10 @@ class Settings(object):
         # combine settings from args, os.environ, and config
         self.build_settings(args, os.environ, config)
 
+        # split lists
+        self.IGNORE_HOST = self.IGNORE_HOST.split() if isinstance(self.IGNORE_HOST, str) else self.IGNORE_HOST
+        self.IGNORE_PATH = self.IGNORE_PATH.split() if isinstance(self.IGNORE_PATH, str) else self.IGNORE_PATH
+
         # setup logging
         self.LOG_LEVEL = self.LOG_LEVEL.upper()
         self.LOG_FILE = Path(self.LOG_FILE).expanduser() if self.LOG_FILE else None
