@@ -14,9 +14,9 @@ class Settings(object):
     _shared_state = {}
 
     CONFIG_FILES = [
-        'log-parser.conf',
-        '~/.log-parser.conf',
-        '/etc/log-parser.conf'
+        'logparser.conf',
+        '~/.logparser.conf',
+        '/etc/logparser.conf'
     ]
 
     DEFAULTS = {

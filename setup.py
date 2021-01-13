@@ -2,7 +2,7 @@ import re
 
 from setuptools import find_packages, setup
 
-with open('log_parser/__init__.py') as f:
+with open('logparser/__init__.py') as f:
     metadata = dict(re.findall(r'__(.*)__ = [\']([^\']*)[\']', f.read()))
 
 with open('requirements.txt') as f:
@@ -16,7 +16,7 @@ setup(
     maintainer=metadata['author'],
     maintainer_email=metadata['email'],
     license=metadata['license'],
-    url='https://github.com/jochenklar/log_parser',
+    url='https://github.com/jochenklar/logparser',
     description=u'',
     long_description=open('README.md').read(),
     install_requires=install_requires,
@@ -33,7 +33,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'log-parser=log_parser.main:main',
+            'logparser=logparser.main:main',
         ]
     }
 )
