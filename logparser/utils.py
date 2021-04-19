@@ -64,31 +64,45 @@ def parse_log_line(line):
 
 
 def parse_date(match):
-    time = datetime.strptime(match.group('time'), time_format)
-    date = time.date()
+    time = match.group('time')
+    logger.debug('time "%s"', time)
+
+    date = datetime.strptime(time, time_format).date()
     return date.isoformat()
 
 
 def parse_status(match):
     status = match.group('status').strip()
+    logger.debug('status "%s"', status)
+
     if status != '-':
         return int(status)
 
 
 def parse_size(match):
     size = match.group('size').strip()
+    logger.debug('size "%s"', size)
+
     if size != '-':
         return int(size)
 
 
 def parse_request(match):
-    m = request_pattern.match(match.group('request'))
-    u = urlparse(m.group('request'))
-    return m.group('method'), u.path, u.query, m.group('http_version')
+    request = match.group('request')
+    logger.debug('request "%s"', request)
+
+    m = request_pattern.match(request)
+    if m:
+        u = urlparse(m.group('request'))
+        return m.group('method'), u.path, u.query, m.group('http_version')
+    else:
+        return False
 
 
 def parse_referrer(match):
     referrer = match.group('referrer').strip()
+    logger.debug('referrer "%s"', referrer)
+
     if referrer != '-':
         u = urlparse(referrer)
         return u.scheme, u.netloc, u.path, u.query
@@ -98,6 +112,8 @@ def parse_referrer(match):
 
 def parse_agent(match):
     agent = match.group('agent').split()[0].strip()
+    logger.debug('agent "%s"', agent)
+
     if agent != '-':
         return agent
     else:
@@ -106,6 +122,7 @@ def parse_agent(match):
 
 def parse_country(match, geoip2_reader):
     host = match.group('host')
+    logger.debug('host "%s"', host)
 
     if host in host_map:
         return host_map[host]

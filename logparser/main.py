@@ -38,27 +38,29 @@ def main():
     for log_line in read_log_lines(settings.INPUT_PATH):
         match = parse_log_line(log_line)
         if match:
-            method, path, query, version = parse_request(match)
+            request = parse_request(match)
+            if request:
+                method, path, query, version = request
 
-            if settings.IGNORE_HOST and match.group('host') in settings.IGNORE_HOST:
-                continue
-            if settings.IGNORE_PATH and path in settings.IGNORE_PATH:
-                continue
+                if settings.IGNORE_HOST and match.group('host') in settings.IGNORE_HOST:
+                    continue
+                if settings.IGNORE_PATH and path in settings.IGNORE_PATH:
+                    continue
 
-            row = {}
-            row['sha1'] = get_hash(log_line)
-            row['host'] = settings.HOST
-            row['date'] = parse_date(match)
-            row['method'] = method
-            row['path'] = path
-            row['query'] = query
-            row['version'] = version
-            row['status'] = parse_status(match)
-            row['size'] = parse_size(match)
-            row['referrer_scheme'], row['referrer_host'], row['referrer_path'], row['referrer_query'] = parse_referrer(match)
-            row['agent'] = parse_agent(match)
-            row['country'] = parse_country(match, settings.GEOIP2_READER)
-            rows.append(row)
+                row = {}
+                row['sha1'] = get_hash(log_line)
+                row['host'] = settings.HOST
+                row['date'] = parse_date(match)
+                row['method'] = method
+                row['path'] = path
+                row['query'] = query
+                row['version'] = version
+                row['status'] = parse_status(match)
+                row['size'] = parse_size(match)
+                row['referrer_scheme'], row['referrer_host'], row['referrer_path'], row['referrer_query'] = parse_referrer(match)
+                row['agent'] = parse_agent(match)
+                row['country'] = parse_country(match, settings.GEOIP2_READER)
+                rows.append(row)
 
     if settings.FORMAT == 'json':
         write_json(rows)
