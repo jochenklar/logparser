@@ -17,7 +17,7 @@ class Record(Base):
     query = Column(Text().with_variant(String(384), 'mysql'), index=True)
     version = Column(Text().with_variant(String(4), 'mysql'), index=True)
     status = Column(Integer, index=True)
-    size = Column(Integer, index=True)
+    size = Column(BigInteger().with_variant(Integer, 'sqlite'), index=True)
     referrer_scheme = Column(Text().with_variant(String(384), 'mysql'), index=True)
     referrer_host = Column(Text().with_variant(String(384), 'mysql'), index=True)
     referrer_path = Column(Text().with_variant(String(384), 'mysql'), index=True)
