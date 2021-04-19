@@ -7,6 +7,8 @@ __pycache__/
 *.save
 .DS_Store
 
+.ipynb_checkpoints
+
 *.mmdb
 
 /env
