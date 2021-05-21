@@ -41,20 +41,6 @@ bulk_save_chunk_size = 100000
 host_map = {}
 
 
-def read_log_lines(log_path):
-    logger.info('Reading %s', log_path)
-
-    log_path = Path(log_path)
-
-    if log_path.suffix == '.gz':
-        with gzip.open(log_path) as f:
-            return [line.strip().decode() for line in f.readlines() if line]
-
-    else:
-        with open(log_path) as f:
-            return [line.strip() for line in f.readlines() if line]
-
-
 def get_hash(line):
     return hashlib.sha1(line.encode()).hexdigest()
 
@@ -136,27 +122,39 @@ def parse_country(match, geoip2_reader):
         return host_map[host]
 
 
-def write_csv(rows, output_path=None):
-    fp = open(output_path, 'w') if output_path else sys.stdout
-    writer = csv.DictWriter(fp, fieldnames=rows[0].keys())
-    writer.writeheader()
+def open_log_file(log_path):
+    logger.info('Opening %s', log_path)
+    log_path = Path(log_path)
+
+    if log_path.suffix == '.gz':
+        return gzip.open(log_path, 'rt', encoding='utf-8')
+    else:
+        return open(log_path)
+
+
+def write_csv(writer, rows, output_path=None):
+    if writer is None:
+        fp = open(output_path, 'w') if output_path else sys.stdout
+        writer = csv.DictWriter(fp, fieldnames=rows[0].keys())
+        writer.writeheader()
+
     writer.writerows(rows)
-    fp.close()
 
 
-def write_json(rows, output_path=None):
-    fp = open(output_path, 'w') if output_path else sys.stdout
+def write_json(fp, rows, output_path=None):
+    if fp is None:
+        fp = open(output_path, 'w') if output_path else sys.stdout
     json.dump(rows, fp, indent=2)
-    fp.close()
 
 
-def write_sql(rows, database_settings):
-    engine = create_engine(database_settings)
+def write_sql(session, rows, database_settings):
+    if session is None:
+        engine = create_engine(database_settings)
 
-    Base.metadata.create_all(engine)
+        Base.metadata.create_all(engine)
 
-    Session = sessionmaker(bind=engine)
-    session = Session()
+        Session = sessionmaker(bind=engine)
+        session = Session()
 
     records = []
     for row in rows:

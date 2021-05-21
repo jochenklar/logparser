@@ -76,37 +76,14 @@ The script is intended to be used with [logrotate](https://linux.die.net/man/8/l
 
 ```
 /var/log/apache2/*.log {
-    daily
-    missingok
-    rotate 14
-    compress
-    delaycompress
-    notifempty
-    create 640 root adm
-    sharedscripts
-    postrotate
-                if invoke-rc.d apache2 status > /dev/null 2>&1; then \
-                    invoke-rc.d apache2 reload > /dev/null 2>&1; \
-                fi;
-    endscript
+    ...
     prerotate
-        if [ -d /etc/logrotate.d/httpd-prerotate ]; then \
-            run-parts /etc/logrotate.d/httpd-prerotate; \
-        fi; \
+        /etc/logparser-prerotate.sh
     endscript
 }
 ```
 
-This configuration calls all executables in `/etc/logrotate.d/httpd-prerotate` before rotating the logs. `logparser` can be used by adding an executable bash script:
-
-```
-# as root
-mkdir /etc/logrotate.d/httpd-prerotate
-touch /etc/logrotate.d/httpd-prerotate/logparser
-chmod +x /etc/logrotate.d/httpd-prerotate/logparser
-```
-
-with the following content of `/etc/logrotate.d/httpd-prerotate/logparser`:
+This configuration calls the script `/etc/logparser-prerotate.sh` before rotating the logs. `/etc/logparser-prerotate.sh` should have the following content:
 
 ```
 #!/bin/bash
@@ -114,7 +91,7 @@ with the following content of `/etc/logrotate.d/httpd-prerotate/logparser`:
 /path/to/logparser/env/bin/logparser /var/log/example2.com.access.log --host=example2.com
 ```
 
-and the following `/etc/logparser.conf`:
+and logparser can be configured like this in `/etc/logparser.conf`:
 
 ```
 [default]
