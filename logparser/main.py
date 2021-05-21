@@ -42,7 +42,7 @@ def main():
     input_handle = open_log_file(settings.INPUT_PATH)
     output_handle = None  # created be opened on the first write
 
-    for log_line in input_handle.readlines():
+    for log_line in input_handle:
         if log_line:
             match = parse_log_line(log_line)
             if match:
