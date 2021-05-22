@@ -38,11 +38,13 @@ def main():
     # create rows buffer
     rows = []
 
-    # open files or database handles
-    input_handle = open_log_file(settings.INPUT_PATH)
-    output_handle = None  # created be opened on the first write
+    # open input file handle
+    fp = open_log_file(settings.INPUT_PATH)
 
-    for log_line in input_handle:
+    # init output handle (file handle or db connection), will be opened on first write
+    oh = None
+
+    for log_line in fp:
         if log_line:
             match = parse_log_line(log_line)
             if match:
@@ -75,17 +77,21 @@ def main():
                     if settings.CHUNKING and len(rows) >= settings.CHUNKING:
                         # write chunks if configured
                         if settings.FORMAT == 'csv':
-                            write_csv(output_handle, rows)
+                            oh = write_csv(oh, rows)
                         elif settings.FORMAT == 'sql':
-                            write_sql(output_handle, rows, settings.DATABASE)
+                            oh = write_sql(oh, rows, settings.DATABASE)
 
                         # reset rows buffer
                         rows = []
 
     # write the remaining output
     if settings.FORMAT == 'json':
-        write_json(output_handle, rows)
+        oh = write_json(oh, rows)
+        oh.close()
     elif settings.FORMAT == 'csv':
-        write_csv(output_handle, rows)
+        oh = write_csv(oh, rows)
+        oh.close()
     elif settings.FORMAT == 'sql':
-        write_sql(output_handle, rows, settings.DATABASE)
+        oh = write_sql(oh, rows, settings.DATABASE)
+        oh.commit()
+        oh.close()

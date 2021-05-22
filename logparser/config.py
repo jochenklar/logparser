@@ -46,7 +46,8 @@ class Settings(object):
             raise RuntimeError('--format=json does not work with --chunking')
 
         # cast CHUNKING to int
-        self.CHUNKING = int(self.CHUNKING)
+        if self.CHUNKING:
+            self.CHUNKING = int(self.CHUNKING)
 
         # split lists
         self.IGNORE_HOST = self.IGNORE_HOST.split() if isinstance(self.IGNORE_HOST, str) else self.IGNORE_HOST

@@ -140,11 +140,15 @@ def write_csv(writer, rows, output_path=None):
 
     writer.writerows(rows)
 
+    return writer
+
 
 def write_json(fp, rows, output_path=None):
     if fp is None:
         fp = open(output_path, 'w') if output_path else sys.stdout
     json.dump(rows, fp, indent=2)
+
+    return fp
 
 
 def write_sql(session, rows, database_settings):
@@ -156,19 +160,18 @@ def write_sql(session, rows, database_settings):
         Session = sessionmaker(bind=engine)
         session = Session()
 
-    records = []
+    session.bulk_save_objects(get_records(rows, session.get_bind().driver))
+
+    return session
+
+
+def get_records(rows, driver):
     for row in rows:
-        if engine.driver in ['sqlite']:
+        if driver in ['sqlite']:
             row['date'] = datetime.strptime(row['date'], '%Y-%m-%d')
-        elif engine.driver in ['mysqldb']:
-            for key in ['host', 'path', 'query', 'referrer_scheme', 'referrer_host', 'referrer_path', 'referrer_query', 'agent']:
-                row[key] = row[key][:384] if row.get(key) else row.get(key)
+        elif driver in ['mysqldb']:
+            for char_field in ['host', 'path', 'query', 'referrer_scheme', 'referrer_host',
+                               'referrer_path', 'referrer_query', 'agent']:
+                row[char_field] = row[char_field][:384] if row.get(char_field) else row.get(char_field)
 
-        records.append(Record(**row))
-
-        if len(records) >= bulk_save_chunk_size:
-            session.bulk_save_objects(records)
-            records = []
-
-    session.bulk_save_objects(records)
-    session.commit()
+        yield Record(**row)
