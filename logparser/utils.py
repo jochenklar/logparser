@@ -40,6 +40,9 @@ bulk_save_chunk_size = 100000
 
 host_map = {}
 
+current_date = None
+current_records = None
+
 
 def get_hash(line):
     return hashlib.sha1(line.encode()).hexdigest()
@@ -160,18 +163,31 @@ def write_sql(session, rows, database_settings):
         Session = sessionmaker(bind=engine)
         session = Session()
 
-    session.bulk_save_objects(get_records(rows, session.get_bind().driver))
+    session.bulk_save_objects(get_records(session, rows))
 
     return session
 
 
-def get_records(rows, driver):
-    for row in rows:
-        if driver in ['sqlite']:
-            row['date'] = datetime.strptime(row['date'], '%Y-%m-%d')
-        elif driver in ['mysqldb']:
-            for char_field in ['host', 'path', 'query', 'referrer_scheme', 'referrer_host',
-                               'referrer_path', 'referrer_query', 'agent']:
-                row[char_field] = row[char_field][:384] if row.get(char_field) else row.get(char_field)
+def get_records(session, rows):
+    global current_date, current_records
 
-        yield Record(**row)
+    driver = session.get_bind().driver
+
+    for row in rows:
+        if row['date'] != current_date:
+            current_date = row['date']
+            current_records = set([
+                sha1 for (sha1, ) in session.query(Record).filter_by(date=current_date).values('sha1')
+            ])
+
+        if row['sha1'] not in current_records:
+            current_records.add(row['sha1'])
+
+            if driver in ['sqlite']:
+                row['date'] = datetime.strptime(row['date'], '%Y-%m-%d')
+            elif driver in ['mysqldb']:
+                for char_field in ['host', 'path', 'query', 'referrer_scheme', 'referrer_host',
+                                   'referrer_path', 'referrer_query', 'agent']:
+                    row[char_field] = row[char_field][:384] if row.get(char_field) else row.get(char_field)
+
+            yield Record(**row)
