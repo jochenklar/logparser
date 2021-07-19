@@ -72,7 +72,8 @@ def main():
                     row['country'] = parse_country(match, settings.GEOIP2_READER)
 
                     # append to buffer
-                    rows.append(row)
+                    if row['date'] is not None:
+                        rows.append(row)
 
                     if settings.CHUNKING and len(rows) >= settings.CHUNKING:
                         # write chunks if configured

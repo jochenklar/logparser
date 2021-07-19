@@ -10,6 +10,7 @@ __pycache__/
 .ipynb_checkpoints
 
 *.mmdb
+*.conf
 
 /env
 /venv

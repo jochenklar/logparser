@@ -56,8 +56,11 @@ def parse_date(match):
     time = match.group('time')
     logger.debug('time "%s"', time)
 
-    date = datetime.strptime(time, time_format).date()
-    return date.isoformat()
+    try:
+        date = datetime.strptime(time, time_format).date()
+        return date.isoformat()
+    except ValueError:
+        return None
 
 
 def parse_status(match):
