@@ -37,6 +37,8 @@ time_format = "%d/%b/%Y:%H:%M:%S %z"
 
 request_pattern = re.compile(r'(?P<method>[A-Z-]+) (?P<request>.*?) HTTP/(?P<http_version>.*)')
 
+agent_pattern = re.compile(r'^(?P<agent>[A-Za-z0-9/.]+)')
+
 bulk_save_chunk_size = 100000
 
 host_map = {}
@@ -104,13 +106,14 @@ def parse_referrer(match):
 
 
 def parse_agent(match):
-    agent = match.group('agent').split()[0].strip()
+    agent = match.group('agent').strip()
     logger.debug('agent "%s"', agent)
 
-    if agent != '-':
-        return agent
+    m = agent_pattern.match(agent)
+    if m:
+        return m.group('agent')
     else:
-        return None
+        return False
 
 
 def parse_country(match, geoip2_reader):
