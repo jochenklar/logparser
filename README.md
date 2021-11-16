@@ -97,5 +97,5 @@ and logparser can be configured like this in `/etc/logparser.conf`:
 [default]
 database = postgresql+psycopg2://username:password@host:port/dbname
 format = sql
-geoip2-database = /path/to/GeoLite2-Country.mmdb
+geoip2_database = /path/to/GeoLite2-Country.mmdb
 ```

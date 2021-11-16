@@ -22,8 +22,7 @@ class Settings(object):
     DEFAULTS = {
         'HOST': 'localhost',
         'FORMAT': 'json',
-        'LOG_LEVEL': 'WARN',
-        'GEOIP2_DATABASE': 'GeoLite2-Country.mmdb'
+        'LOG_LEVEL': 'WARN'
     }
 
     def __init__(self):

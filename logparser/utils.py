@@ -3,6 +3,7 @@ import gzip
 import hashlib
 import json
 import logging
+import lzma
 import re
 import sys
 from datetime import datetime
@@ -113,6 +114,9 @@ def parse_agent(match):
 
 
 def parse_country(match, geoip2_reader):
+    if geoip2_reader is None:
+        return None
+
     host = match.group('host')
     logger.debug('host "%s"', host)
 
@@ -134,6 +138,8 @@ def open_log_file(log_path):
 
     if log_path.suffix == '.gz':
         return gzip.open(log_path, 'rt', encoding='utf-8')
+    elif log_path.suffix == '.xz':
+        return lzma.open(log_path, 'rt', encoding='utf-8')
     else:
         return open(log_path)
 
