@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from geoip2.errors import AddressNotFoundError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, column
 from sqlalchemy.orm import sessionmaker
 
 from .models import Base, Record
@@ -189,7 +189,7 @@ def get_records(session, rows):
         if row['date'] != current_date:
             current_date = row['date']
             current_records = set([
-                sha1 for (sha1, ) in session.query(Record).filter_by(date=current_date).values('sha1')
+                sha1 for (sha1, ) in session.query(Record).filter_by(date=current_date).values(column('sha1'))
             ])
 
         if row['sha1'] not in current_records:
