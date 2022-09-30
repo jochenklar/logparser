@@ -1,3 +1,4 @@
 geoip2
 python-dotenv
 SQLAlchemy
+user-agents

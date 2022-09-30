@@ -11,8 +11,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from geoip2.errors import AddressNotFoundError
-from sqlalchemy import create_engine, column
+from sqlalchemy import create_engine, column, func
 from sqlalchemy.orm import sessionmaker
+from user_agents import parse
 
 from .models import Base, Record
 
@@ -37,8 +38,6 @@ time_format = "%d/%b/%Y:%H:%M:%S %z"
 
 request_pattern = re.compile(r'(?P<method>[A-Z-]+) (?P<request>.*?) HTTP/(?P<http_version>.*)')
 
-agent_pattern = re.compile(r'^(?P<agent>[A-Za-z0-9/.]+)')
-
 bulk_save_chunk_size = 100000
 
 host_map = {}
@@ -55,13 +54,12 @@ def parse_log_line(line):
     return log_pattern.match(line)
 
 
-def parse_date(match):
+def parse_time(match):
     time = match.group('time')
     logger.debug('time "%s"', time)
 
     try:
-        date = datetime.strptime(time, time_format).date()
-        return date.isoformat()
+        return datetime.strptime(time, time_format).isoformat()
     except ValueError:
         return None
 
@@ -105,15 +103,11 @@ def parse_referrer(match):
         return None, None, None, None
 
 
-def parse_agent(match):
+def parse_user_agent(match):
     agent = match.group('agent').strip()
     logger.debug('agent "%s"', agent)
-
-    m = agent_pattern.match(agent)
-    if m:
-        return m.group('agent')
-    else:
-        return False
+    parsed_agent = parse(agent)
+    return agent, parsed_agent.get_device(), parsed_agent.get_os(), parsed_agent.get_browser()
 
 
 def parse_country(match, geoip2_reader):
@@ -147,26 +141,35 @@ def open_log_file(log_path):
         return open(log_path)
 
 
-def write_csv(writer, rows, output_path=None):
-    if writer is None:
+def write_csv(handle, rows, output_path=None, close=False):
+    if handle is None:
         fp = open(output_path, 'w') if output_path else sys.stdout
         writer = csv.DictWriter(fp, fieldnames=rows[0].keys())
         writer.writeheader()
+    else:
+        fp, writer = handle
 
     writer.writerows(rows)
 
-    return writer
+    if close:
+        fp.close()
+    else:
+        return fp, writer
 
 
-def write_json(fp, rows, output_path=None):
+def write_json(fp, rows, output_path=None, close=False):
     if fp is None:
         fp = open(output_path, 'w') if output_path else sys.stdout
+
     json.dump(rows, fp, indent=2)
 
-    return fp
+    if close:
+        fp.close()
+    else:
+        return fp
 
 
-def write_sql(session, rows, database_settings):
+def write_sql(session, rows, database_settings, close=False):
     if session is None:
         engine = create_engine(database_settings)
 
@@ -179,6 +182,11 @@ def write_sql(session, rows, database_settings):
 
     return session
 
+    if close:
+        session.close()
+    else:
+        return session
+
 
 def get_records(session, rows):
     global current_date, current_records
@@ -186,10 +194,11 @@ def get_records(session, rows):
     driver = session.get_bind().driver
 
     for row in rows:
-        if row['date'] != current_date:
-            current_date = row['date']
+        row_date = datetime.fromisoformat(row['time']).date()
+        if row_date != current_date:
+            current_date = row_date
             current_records = set([
-                sha1 for (sha1, ) in session.query(Record).filter_by(date=current_date).values(column('sha1'))
+                sha1 for (sha1, ) in session.query(Record).filter(func.DATE(Record.time) == row_date).values(column('sha1'))
             ])
 
         if row['sha1'] not in current_records:

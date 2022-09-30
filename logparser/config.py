@@ -51,6 +51,8 @@ class Settings(object):
         # split lists
         self.IGNORE_HOST = self.IGNORE_HOST.split() if isinstance(self.IGNORE_HOST, str) else self.IGNORE_HOST
         self.IGNORE_PATH = self.IGNORE_PATH.split() if isinstance(self.IGNORE_PATH, str) else self.IGNORE_PATH
+        self.IGNORE_METHOD = self.IGNORE_METHOD.split() if isinstance(self.IGNORE_METHOD, str) else self.IGNORE_METHOD
+        self.IGNORE_STATUS = self.IGNORE_STATUS.split() if isinstance(self.IGNORE_STATUS, str) else self.IGNORE_STATUS
 
         # setup logging
         self.LOG_LEVEL = self.LOG_LEVEL.upper()
