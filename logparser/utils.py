@@ -212,8 +212,7 @@ def write_sql(session, rows, database_settings, close=False):
         session = Session()
 
     session.bulk_save_objects(get_records(session, rows))
-
-    return session
+    session.commit()
 
     if close:
         session.close()
