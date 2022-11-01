@@ -46,12 +46,41 @@ current_date = None
 current_records = None
 
 
-def get_hash(line):
-    return hashlib.sha1(line.encode()).hexdigest()
+def parse_log_line(line, host='localhost', geoip2_reader=None):
+    if line:
+        match = log_pattern.match(line)
+        if match:
+            time = parse_time(match)
+            if time:
+                request = parse_request(match)
+                if request:
+                    request_method, request_path, request_query, request_version = request
+                    status = parse_status(match)
+                    referrer_scheme, referrer_host, referrer_path, referrer_query = parse_referrer(match)
+                    user_agent, user_agent_device, user_agent_os, user_agent_browser = parse_user_agent(match)
 
-
-def parse_log_line(line):
-    return log_pattern.match(line)
+                    return {
+                        'sha1': get_hash(line),
+                        'host': host,
+                        'remote_host': match.group('host'),
+                        'remote_country': get_country(match, geoip2_reader),
+                        'remote_user': match.group('user'),
+                        'time': time,
+                        'request_method': request_method,
+                        'request_path': request_path,
+                        'request_query': request_query,
+                        'request_version': request_version,
+                        'status': status,
+                        'size': parse_size(match),
+                        'referrer_scheme': referrer_scheme,
+                        'referrer_host': referrer_host,
+                        'referrer_path': referrer_path,
+                        'referrer_query': referrer_query,
+                        'user_agent': user_agent,
+                        'user_agent_device': user_agent_device,
+                        'user_agent_os': user_agent_os,
+                        'user_agent_browser': user_agent_browser
+                    }
 
 
 def parse_time(match):
@@ -59,7 +88,7 @@ def parse_time(match):
     logger.debug('time "%s"', time)
 
     try:
-        return datetime.strptime(time, time_format).isoformat()
+        return datetime.strptime(time, time_format)
     except ValueError:
         return None
 
@@ -110,7 +139,11 @@ def parse_user_agent(match):
     return agent, parsed_agent.get_device(), parsed_agent.get_os(), parsed_agent.get_browser()
 
 
-def parse_country(match, geoip2_reader):
+def get_hash(line):
+    return hashlib.sha1(line.encode()).hexdigest()
+
+
+def get_country(match, geoip2_reader):
     if geoip2_reader is None:
         return None
 

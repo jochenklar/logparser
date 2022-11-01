@@ -1,9 +1,7 @@
 import argparse
 
 from .config import settings
-from .utils import (get_hash, open_log_file, parse_country, parse_user_agent,
-                    parse_time, parse_log_line, parse_referrer, parse_request,
-                    parse_size, parse_status, write_csv, write_json, write_sql)
+from .utils import (open_log_file, parse_log_line, write_csv, write_json, write_sql)
 
 
 def main():
@@ -47,73 +45,45 @@ def main():
 
     for input_path in settings.INPUT_PATHS:
 
-        # open input file handle
-        fp = open_log_file(input_path)
+        with open_log_file(input_path) as fp:
+            log_lines = fp.readlines()
 
-        for log_line in fp:
-            if log_line:
-                match = parse_log_line(log_line)
-                if match:
-                    request = parse_request(match)
-                    if request:
-                        request_method, request_path, request_query, request_version = request
-                        status = parse_status(match)
-                        referrer_scheme, referrer_host, referrer_path, referrer_query = parse_referrer(match)
-                        user_agent, user_agent_device, user_agent_os, user_agent_browser = parse_user_agent(match)
+        for log_line in log_lines:
 
-                        # apply ignore lists
-                        if settings.IGNORE_HOST and any(match.group('host').startswith(ignore_host)
-                                                        for ignore_host in settings.IGNORE_HOST):
-                            continue
+            log_entry = parse_log_line(log_line, host=settings.HOST, geoip2_reader=settings.GEOIP2_READER)
+            if log_entry:
 
-                        if settings.IGNORE_METHOD and any(request_method == ignore_method
-                                                          for ignore_method in settings.IGNORE_METHOD):
-                            continue
+                if settings.IGNORE_HOST and any(log_entry['host'].startswith(ignore_host)
+                                                for ignore_host in settings.IGNORE_HOST):
+                    continue
 
-                        if settings.IGNORE_PATH and any(request_path.startswith(ignore_path)
-                                                        for ignore_path in settings.IGNORE_PATH):
-                            continue
+                if settings.IGNORE_METHOD and any(log_entry['request_method'] == ignore_method
+                                                  for ignore_method in settings.IGNORE_METHOD):
+                    continue
 
-                        if settings.IGNORE_STATUS and any(status == int(ignore_status)
-                                                          for ignore_status in settings.IGNORE_STATUS):
-                            continue
+                if settings.IGNORE_PATH and any(log_entry['request_path'].startswith(ignore_path)
+                                                for ignore_path in settings.IGNORE_PATH):
+                    continue
 
-                        row = {
-                            'sha1': get_hash(log_line),
-                            'host': settings.HOST,
-                            'remote_host': match.group('host'),
-                            'remote_country': parse_country(match, settings.GEOIP2_READER),
-                            'remote_user': match.group('user'),
-                            'time': parse_time(match),
-                            'request_method': request_method,
-                            'request_path': request_path,
-                            'request_query': request_query,
-                            'request_version': request_version,
-                            'status': status,
-                            'size': parse_size(match),
-                            'referrer_scheme': referrer_scheme,
-                            'referrer_host': referrer_host,
-                            'referrer_path': referrer_path,
-                            'referrer_query': referrer_query,
-                            'user_agent': user_agent,
-                            'user_agent_device': user_agent_device,
-                            'user_agent_os': user_agent_os,
-                            'user_agent_browser': user_agent_browser
-                        }
+                if settings.IGNORE_STATUS and any(log_entry['status'] == int(ignore_status)
+                                                  for ignore_status in settings.IGNORE_STATUS):
+                    continue
 
-                        # append to buffer
-                        if row['time'] is not None:
-                            rows.append(row)
+                # store time as isoformat
+                log_entry['time'] = log_entry['time'].isoformat()
 
-                        if settings.CHUNKING and len(rows) >= settings.CHUNKING:
-                            # write chunks if configured
-                            if settings.FORMAT == 'csv':
-                                oh = write_csv(oh, rows)
-                            elif settings.FORMAT == 'sql':
-                                oh = write_sql(oh, rows, settings.DATABASE)
+                # append to buffer
+                rows.append(log_entry)
 
-                            # reset rows buffer
-                            rows = []
+                if settings.CHUNKING and len(rows) >= settings.CHUNKING:
+                    # write chunks if configured
+                    if settings.FORMAT == 'csv':
+                        oh = write_csv(oh, rows)
+                    elif settings.FORMAT == 'sql':
+                        oh = write_sql(oh, rows, settings.DATABASE)
+
+                    # reset rows buffer
+                    rows = []
 
     # write the remaining output
     if settings.FORMAT == 'json':
