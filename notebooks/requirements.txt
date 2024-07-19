@@ -1,4 +1,0 @@
-jupyterlab
-pandas
-matplotlib
-python-dotenv
