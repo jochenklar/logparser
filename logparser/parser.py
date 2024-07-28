@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 
 from user_agents import parse
 
+from .models import LogEntry
+
 logger = logging.getLogger(__name__)
 
 class LogParser:
@@ -51,28 +53,28 @@ class LogParser:
                         referrer_scheme, referrer_host, referrer_path, referrer_query = self.parse_referrer(match)
                         user_agent, user_agent_device, user_agent_os, user_agent_browser = self.parse_user_agent(match)
 
-                        return {
-                            'sha1': hashlib.sha1(line.encode()).hexdigest(),
-                            'host': self.host,
-                            'remote_host': match.group('host'),
-                            'remote_country': self.get_country(match),
-                            'remote_user': match.group('user'),
-                            'time': time,
-                            'request_method': request_method,
-                            'request_path': request_path,
-                            'request_query': request_query,
-                            'request_version': request_version,
-                            'status': status,
-                            'size': self.parse_size(match),
-                            'referrer_scheme': referrer_scheme,
-                            'referrer_host': referrer_host,
-                            'referrer_path': referrer_path,
-                            'referrer_query': referrer_query,
-                            'user_agent': user_agent,
-                            'user_agent_device': user_agent_device,
-                            'user_agent_os': user_agent_os,
-                            'user_agent_browser': user_agent_browser
-                        }
+                        return LogEntry(
+                            sha1=hashlib.sha1(line.encode()).hexdigest(),
+                            host=self.host,
+                            remote_host=match.group('host'),
+                            remote_country=self.get_country(match),
+                            remote_user=match.group('user'),
+                            time=time,
+                            request_method=request_method,
+                            request_path=request_path,
+                            request_query=request_query,
+                            request_version=request_version,
+                            status=status,
+                            size=self.parse_size(match),
+                            referrer_scheme=referrer_scheme,
+                            referrer_host=referrer_host,
+                            referrer_path=referrer_path,
+                            referrer_query=referrer_query,
+                            user_agent=user_agent,
+                            user_agent_device=user_agent_device,
+                            user_agent_os=user_agent_os,
+                            user_agent_browser=user_agent_browser
+                        )
 
     def parse_time(self, match):
         time = match.group('time')

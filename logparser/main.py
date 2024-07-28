@@ -64,30 +64,27 @@ def main():
 
             if log_entry:
                 if args.ignore_host and any(
-                    log_entry['host'].startswith(ignore_host) for ignore_host in args.ignore_host
+                    log_entry.host.startswith(ignore_host) for ignore_host in args.ignore_host
                 ):
                     continue
 
                 if args.ignore_method and any(
-                    log_entry['request_method'] == ignore_method for ignore_method in args.ignore_method
+                    log_entry.request_method == ignore_method for ignore_method in args.ignore_method
                 ):
                     continue
 
                 if args.ignore_path and any(
-                    log_entry['request_path'].startswith(ignore_path)for ignore_path in args.ignore_path
+                    log_entry.request_path.startswith(ignore_path)for ignore_path in args.ignore_path
                 ):
                     continue
 
                 if args.ignore_status and any(
-                    log_entry['status'] == int(ignore_status) for ignore_status in args.ignore_status
+                    log_entry.status == int(ignore_status) for ignore_status in args.ignore_status
                 ):
                     continue
 
-                # store time as isoformat
-                log_entry['time'] = log_entry['time'].isoformat()
-
                 # append to buffer
-                writer.append(log_line, log_entry)
+                writer.append(log_line, log_entry.serialize())
                 if writer.chunk():
                     writer.write()
                     writer.rows = []  # reset rows buffer

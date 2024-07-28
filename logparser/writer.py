@@ -3,31 +3,10 @@ import json
 import sys
 from datetime import datetime
 
+from .models import LogEntry
+
 
 class Writer:
-
-    fieldnames = [
-        'sha1',
-        'host',
-        'remote_host',
-        'remote_country',
-        'remote_user',
-        'time',
-        'request_method',
-        'request_path',
-        'request_query',
-        'request_version',
-        'status',
-        'size',
-        'referrer_scheme',
-        'referrer_host',
-        'referrer_path',
-        'referrer_query',
-        'user_agent',
-        'user_agent_device',
-        'user_agent_os',
-        'user_agent_browser'
-    ]
 
     def __init__(self, format='raw', chunking=None, output_path=None, database_settings=None):
         self.format = format
@@ -47,7 +26,7 @@ class Writer:
 
         elif self.format == 'csv':
             self.fp = open(self.output, 'w') if self.output_path else sys.stdout
-            self.writer = csv.DictWriter(self.fp, fieldnames=self.fieldnames)
+            self.writer = csv.DictWriter(self.fp, fieldnames=LogEntry.get_fields())
             self.writer.writeheader()
 
         elif self.format == 'sql':

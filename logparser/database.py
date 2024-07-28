@@ -36,6 +36,9 @@ class Record(Base):
 
 
 def create_session(database_settings):
+    if database_settings is None:
+        raise RuntimeError('No database connection available')
+
     engine = create_engine(database_settings)
 
     Base.metadata.create_all(engine)
