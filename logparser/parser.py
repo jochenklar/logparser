@@ -1,12 +1,13 @@
-import hashlib
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
 from urllib.parse import urlparse
 
 from user_agents import parse
 
 from .models import LogEntry
+from .utils import get_random_salt, get_sha1
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,13 @@ class LogParser:
 
     request_pattern = re.compile(r'(?P<method>[A-Z-]+) (?P<request>.*?) HTTP/(?P<http_version>.*)')
 
-    def __init__(self, host='localhost', geoip2_database=None):
+    def __init__(self, host='localhost', anon=None, salts=None, geoip2_database=None):
         self.host = host
         self.host_map = {}
+        self.salt_map = {}
+
+        self.anon = anon
+        self.salts = salts
 
         if geoip2_database:
             import geoip2.database
@@ -44,28 +49,37 @@ class LogParser:
         if line:
             match = self.line_pattern.match(line)
             if match:
-                time = self.parse_time(match)
+                time = self.parse_time(match.group('time'))
                 if time:
-                    request = self.parse_request(match)
+                    request = self.parse_request(match.group('request'))
                     if request:
                         request_method, request_path, request_query, request_version = request
-                        status = self.parse_status(match)
-                        referrer_scheme, referrer_host, referrer_path, referrer_query = self.parse_referrer(match)
-                        user_agent, user_agent_device, user_agent_os, user_agent_browser = self.parse_user_agent(match)
+
+                        status = self.parse_int(match.group('status'))
+                        size = self.parse_int(match.group('size'))
+
+                        referrer_scheme, referrer_host, referrer_path, referrer_query = \
+                            self.parse_referrer(match.group('referrer'))
+                        user_agent, user_agent_device, user_agent_os, user_agent_browser = \
+                            self.parse_user_agent(match.group('agent'))
+
+                        remote_host = self.get_remote_host(match.group('host'), time, user_agent)
+                        remote_country = self.get_remote_country(match.group('host'))
+                        remote_user = self.get_remote_user(match.group('user'))
 
                         return LogEntry(
-                            sha1=hashlib.sha1(line.encode()).hexdigest(),
+                            sha1=get_sha1(line),
                             host=self.host,
-                            remote_host=match.group('host'),
-                            remote_country=self.get_country(match),
-                            remote_user=match.group('user'),
+                            remote_host=remote_host,
+                            remote_country=remote_country,
+                            remote_user=remote_user,
                             time=time,
                             request_method=request_method,
                             request_path=request_path,
                             request_query=request_query,
                             request_version=request_version,
                             status=status,
-                            size=self.parse_size(match),
+                            size=size,
                             referrer_scheme=referrer_scheme,
                             referrer_host=referrer_host,
                             referrer_path=referrer_path,
@@ -76,78 +90,86 @@ class LogParser:
                             user_agent_browser=user_agent_browser
                         )
 
-    def parse_time(self, match):
-        time = match.group('time')
-        logger.debug('time "%s"', time)
-
+    def parse_time(self, time):
         try:
             return datetime.strptime(time, self.time_format)
         except ValueError:
             return None
 
+    def parse_int(self, value):
+        value = value.strip()
+        if value != '-':
+            return int(value)
 
-    def parse_status(self, match):
-        status = match.group('status').strip()
-        logger.debug('status "%s"', status)
-
-        if status != '-':
-            return int(status)
-
-
-    def parse_size(self, match):
-        size = match.group('size').strip()
-        logger.debug('size "%s"', size)
-
-        if size != '-':
-            return int(size)
-
-
-    def parse_request(self, match):
-        request = match.group('request')
-        logger.debug('request "%s"', request)
-
-        m = self.request_pattern.match(request)
-        if m:
-            u = urlparse(m.group('request'))
-            return m.group('method'), u.path, u.query, m.group('http_version')
+    def parse_request(self, request):
+        match = self.request_pattern.match(request)
+        if match:
+            u = urlparse(match.group('request'))
+            return match.group('method'), u.path, u.query, match.group('http_version')
         else:
-            return False
+            return None, None, None, None
 
-
-    def parse_referrer(self, match):
-        referrer = match.group('referrer').strip()
-        logger.debug('referrer "%s"', referrer)
-
+    def parse_referrer(self, referrer):
+        referrer = referrer.strip()
         if referrer != '-':
             u = urlparse(referrer)
             return u.scheme, u.netloc, u.path, u.query
         else:
             return None, None, None, None
 
-
-    def parse_user_agent(self, match):
-        agent = match.group('agent').strip()
-        logger.debug('agent "%s"', agent)
+    def parse_user_agent(self, agent):
+        agent = agent.strip()
         parsed_agent = parse(agent)
         return agent, parsed_agent.get_device(), parsed_agent.get_os(), parsed_agent.get_browser()
 
+    def get_remote_host(self, remote_host, time, user_agent):
+        if self.anon is None:
+            return remote_host
+        else:
+            return get_sha1(self.get_salt(time) + remote_host + user_agent)
 
-    def get_country(self, match):
+    def get_remote_country(self, remote_host):
         if self.geoip2_reader is None:
             return None
 
         from geoip2.errors import AddressNotFoundError
 
-        host = match.group('host')
-        logger.debug('host "%s"', host)
-
-        if host in self.host_map:
-            return self.host_map[host]
+        if remote_host in self.host_map:
+            return self.host_map[remote_host]
         else:
             try:
-                country_response = self.geoip2_reader.country(match.group('host'))
-                self.host_map[host] = country_response.country.iso_code.lower()
+                country_response = self.geoip2_reader.country(remote_host)
+                self.host_map[remote_host] = country_response.country.iso_code.lower()
             except (AddressNotFoundError, AttributeError):
-                self.host_map[host] = None
+                self.host_map[remote_host] = None
 
-            return self.host_map[host]
+            return self.host_map[remote_host]
+
+    def get_remote_user(self, user):
+        return user if self.anon is None else None
+
+    def get_salt(self, time):
+        date = time.date()
+
+        if self.anon == 'daily':
+            salt_date = date
+        elif self.anon == 'weekly':
+            salt_date = date - timedelta(days=date.weekday())
+        elif self.anon == 'monthly':
+            salt_date = date - timedelta(days=date.day-1)
+        else:
+            raise RuntimeError('anon must be one of (daily, weekly, monthly)')
+
+        salt = self.salt_map.get(salt_date)
+        if salt is None:
+            salt_path = Path(self.salts) / str(salt_date)
+            if salt_path.exists():
+                salt = salt_path.read_text()
+            else:
+                salt = get_random_salt()
+                salt_path.parent.mkdir(exist_ok=True, parents=True)
+                salt_path.write_text(salt)
+
+            self.salt_map[salt_date] = salt
+
+        return salt

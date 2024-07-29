@@ -24,6 +24,10 @@ def main():
                         help='Database connection string, e.g. postgresql+psycopg2://username:password@host:port/dbname')
     parser.add_argument('--geoip2-database', dest='geoip2_database', default=os.environ.get('GEOIP2_DATABASE'),
                         help='Path to the geoip2 database')
+    parser.add_argument('--anon', dest='anon', default=os.environ.get('ANON'), choices=['daily', 'weekly', 'monthly'],
+                        help='Anonymize the remote hosts (IP adresses), using daily, weekly, or monthly unique IDs')
+    parser.add_argument('--salts', dest='salts', default=os.environ.get('SALTS', 'salts'),
+                        help='Path where the salts for the anonymization are stored [default: salts]')
     parser.add_argument('--ignore-host', dest='ignore_host', action='append',
                         help='Host in the logs to be ignored, useful for internal ips, can be repeated')
     parser.add_argument('--ignore-method', dest='ignore_method', action='append',
@@ -49,7 +53,7 @@ def main():
                         format='[%(asctime)s] %(levelname)s: %(message)s')
 
     # init LogParser
-    parser = LogParser(host=args.host, geoip2_database=args.geoip2_database)
+    parser = LogParser(host=args.host, anon=args.anon, salts=args.salts, geoip2_database=args.geoip2_database)
 
     # init writer
     writer = Writer(args.format, database_settings=args.database)
