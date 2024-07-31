@@ -1,17 +1,17 @@
 import csv
 import json
-import sys
 from datetime import datetime
 
 from .models import LogEntry
+from .utils import open_output_file
 
 
 class Writer:
 
-    def __init__(self, format='raw', chunking=None, output_path=None, database_settings=None):
+    def __init__(self, format=None, chunking=None, path=None, database_settings=None):
         self.format = format
         self.chunking = chunking
-        self.output_path = output_path
+        self.path = path
         self.database_settings = database_settings
 
         self.log_lines = []
@@ -21,41 +21,44 @@ class Writer:
         self.current_records = set()
 
     def open(self):
-        if self.format in ['raw', 'json']:
-            self.fp = open(self.output, 'w') if self.output_path else sys.stdout
-
-        elif self.format == 'csv':
-            self.fp = open(self.output, 'w') if self.output_path else sys.stdout
-            self.writer = csv.DictWriter(self.fp, fieldnames=LogEntry.get_fields())
-            self.writer.writeheader()
-
-        elif self.format == 'sql':
+        if self.format == 'sql':
             from .database import create_session
             self.session = create_session(self.database_settings)
+
+        else:
+            self.fp = open_output_file(self.path, 'wt')
+
+            if self.format in ['csv', 'csv.gz', 'csv.xz']:
+                self.writer = csv.DictWriter(self.fp, fieldnames=LogEntry.get_fields())
+                self.writer.writeheader()
+
 
     def append(self, log_line, log_entry):
         self.log_lines.append(log_line)
         self.log_entries.append(log_entry)
 
     def chunk(self):
-        return (self.chunking and len(self.log_entries) >= self.chunking)
+        return (self.chunking and len(self.log_entries) >= int(self.chunking))
 
     def write(self):
-        if self.format == 'raw':
-            self.fp.writelines(self.log_lines)
-        elif self.format == 'json':
-            json.dump(self.log_entries, self.fp, indent=2)
-        elif self.format == 'csv':
-            self.writer.writerows(self.log_entries)
-        elif self.format == 'sql':
+        if self.format == 'sql':
             self.session.bulk_save_objects(self.get_records())
             self.session.commit()
 
+        elif self.format in ['json', 'json.gz', 'json.xz']:
+            json.dump(self.log_entries, self.fp, indent=2)
+
+        elif self.format in ['csv', 'csv.gz', 'csv.xz']:
+            self.writer.writerows(self.log_entries)
+
+        else:
+            self.fp.writelines(self.log_lines)
+
     def close(self):
-        if self.format in ['raw', 'json', 'csv']:
-            self.fp.close()
-        elif self.format == 'sql':
+        if self.format == 'sql':
             self.session.close()
+        else:
+            self.fp.close()
 
     def get_records(self):
         from .database import Record, get_current_records

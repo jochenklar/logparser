@@ -41,6 +41,7 @@ class LogParser:
 
         if geoip2_database:
             import geoip2.database
+            geoip2_database = Path(geoip2_database).expanduser()
             self.geoip2_reader = geoip2.database.Reader(geoip2_database)
         else:
             self.geoip2_reader = None

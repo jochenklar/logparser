@@ -2,24 +2,29 @@ import argparse
 import logging
 import os
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from .parser import LogParser
-from .utils import open_log_file
+from .utils import get_output_path, open_log_file
 from .writer import Writer
+
+FORMATS = ['json', 'json.gz', 'json.xz', 'csv', 'csv.gz', 'csv.xz', 'sql']
 
 
 def main():
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('input_paths', metavar='path', nargs='+',
                         help='Paths to the files to process, can be a pattern using *')
-    parser.add_argument('--format', choices=['raw', 'json', 'csv', 'sql'], default=os.environ.get('FORMAT', 'raw'),
-                        help='Output format, default: raw')
+    parser.add_argument('--format', default=os.environ.get('FORMAT'),
+                         choices=['json', 'json.gz', 'json.xz', 'csv', 'csv.gz', 'csv.xz', 'sql'],
+                         help='Output format, if non is provided, the input is given as output.')
     parser.add_argument('--host', dest='host', default=os.environ.get('HOST', 'localhost'),
                         help='Host for this log, useful if logs of multiple hosts are'
                              ' aggregated in one place, default: localhost')
+    parser.add_argument('--output-path', dest='output_path', default=os.environ.get('OUTPUT_PATH', '.'),
+                        help='Path where the outputs are written to')
     parser.add_argument('--database', dest='database', default=os.environ.get('DATABASE'),
                         help='Database connection string, e.g. postgresql+psycopg2://username:password@host:port/dbname')
     parser.add_argument('--geoip2-database', dest='geoip2_database', default=os.environ.get('GEOIP2_DATABASE'),
@@ -45,8 +50,8 @@ def main():
 
     args = parser.parse_args()
 
-    if args.format == 'json' and args.chunking:
-        raise RuntimeError('--format=json does not work with --chunking')
+    if args.format in ['json', 'json.gz', 'json.xz'] and args.chunking:
+        raise RuntimeError('JSON output does not work with --chunking')
 
     # setup logging
     logging.basicConfig(level=args.log_level.upper(), filename=args.log_file,
@@ -55,14 +60,19 @@ def main():
     # init LogParser
     parser = LogParser(host=args.host, anon=args.anon, salts=args.salts, geoip2_database=args.geoip2_database)
 
-    # init writer
-    writer = Writer(args.format, database_settings=args.database)
-    writer.open()
     for input_path in args.input_paths:
+        # create output path for this input path
+        output_path = get_output_path(input_path, args.output_path, args.format)
 
+        # init writer
+        writer = Writer(format=args.format, chunking=args.chunking, path=output_path, database_settings=args.database)
+        writer.open()
+
+        # open log file
         with open_log_file(input_path) as fp:
             log_lines = fp.readlines()
 
+        # loop over log_lines in the log_file
         for log_line in log_lines:
             log_entry = parser.parse_line(log_line)
 
@@ -93,6 +103,6 @@ def main():
                     writer.write()
                     writer.rows = []  # reset rows buffer
 
-    # write the remaining output
-    writer.write()
-    writer.close()
+        # write the remaining output
+        writer.write()
+        writer.close()
