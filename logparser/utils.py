@@ -27,8 +27,11 @@ def open_output_file(output_path, mode='rt'):
     if output_path is None:
         return sys.stdout
 
+    output_path = Path(output_path)
 
-    output_path.parent.mkdir(exist_ok=True, parents=True)
+    if mode.startswith('w'):
+        output_path.parent.mkdir(exist_ok=True, parents=True)
+
     if output_path.suffix == '.gz':
         return gzip.open(output_path, mode, encoding='utf-8')
     elif output_path.suffix == '.xz':

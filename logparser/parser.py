@@ -141,7 +141,7 @@ class LogParser:
             try:
                 country_response = self.geoip2_reader.country(remote_host)
                 self.host_map[remote_host] = country_response.country.iso_code.lower()
-            except (AddressNotFoundError, AttributeError):
+            except (AddressNotFoundError, AttributeError, ValueError):
                 self.host_map[remote_host] = None
 
             return self.host_map[remote_host]

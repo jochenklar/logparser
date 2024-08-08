@@ -63,6 +63,8 @@ def main():
     for input_path in args.input_paths:
         # create output path for this input path
         output_path = get_output_path(input_path, args.output_path, args.format)
+        if output_path and output_path.exists():
+            continue
 
         # init writer
         writer = Writer(format=args.format, chunking=args.chunking, path=output_path, database_settings=args.database)
