@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 from .models import LogEntry
-from .utils import open_output_file
+from .utils import open_log_file
 
 
 class Writer:
@@ -26,7 +26,7 @@ class Writer:
             self.session = create_session(self.database_settings)
 
         else:
-            self.fp = open_output_file(self.path, 'wt')
+            self.fp = open_log_file(self.path, 'wt')
 
             if self.format in ['csv', 'csv.gz', 'csv.xz']:
                 self.writer = csv.DictWriter(self.fp, fieldnames=LogEntry.get_fields())
