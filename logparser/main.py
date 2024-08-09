@@ -17,22 +17,26 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_paths', metavar='path', nargs='+',
                         help='Paths to the files to process, can be a pattern using *')
-    parser.add_argument('--format', default=os.environ.get('FORMAT'),
-                         choices=['json', 'json.gz', 'json.xz', 'csv', 'csv.gz', 'csv.xz', 'sql'],
-                         help='Output format, if non is provided, the input is given as output.')
-    parser.add_argument('--host', dest='host', default=os.environ.get('HOST', 'localhost'),
+    parser.add_argument('-f|--format', dest='format', default=os.environ.get('FORMAT'),
+                        choices=['json', 'json.gz', 'json.xz', 'csv', 'csv.gz', 'csv.xz', 'sql'],
+                        help='Output format, if non is provided, the input is given as output.')
+    parser.add_argument('-h|--host', dest='host', default=os.environ.get('HOST', 'localhost'),
                         help='Host for this log, useful if logs of multiple hosts are'
                              ' aggregated in one place, default: localhost')
-    parser.add_argument('--output-path', dest='output_path', default=os.environ.get('OUTPUT_PATH', '.'),
+    parser.add_argument('-o|--output-path', dest='output_path', default=os.environ.get('OUTPUT_PATH', '.'),
                         help='Path where the outputs are written to')
-    parser.add_argument('--database', dest='database', default=os.environ.get('DATABASE'),
+    parser.add_argument('-d|--database', dest='database', default=os.environ.get('DATABASE'),
                         help='Database connection string, e.g. postgresql+psycopg2://username:password@host:port/dbname')
-    parser.add_argument('--geoip2-database', dest='geoip2_database', default=os.environ.get('GEOIP2_DATABASE'),
+    parser.add_argument('-g|--geoip2-database', dest='geoip2_database', default=os.environ.get('GEOIP2_DATABASE'),
                         help='Path to the geoip2 database')
-    parser.add_argument('--anon', dest='anon', default=os.environ.get('ANON'), choices=['daily', 'weekly', 'monthly'],
-                        help='Anonymize the remote hosts (IP adresses), using daily, weekly, or monthly unique IDs')
-    parser.add_argument('--salts', dest='salts', default=os.environ.get('SALTS', 'salts'),
+    parser.add_argument('-a|--anon', dest='anon', default=os.environ.get('ANON'),
+                        choices=['daily', 'weekly', 'monthly', 'eternally'],
+                        help='Anonymize the remote hosts (IP adresses), using daily, weekly,'
+                             'monthly or eternally unique IDs')
+    parser.add_argument('-s|--salts', dest='salts', default=os.environ.get('SALTS', 'salts'),
                         help='Path where the salts for the anonymization are stored [default: salts]')
+    parser.add_argument('-c|--chunking', dest='chunking', type=int, default=os.environ.get('CHUNKING'),
+                        help='Optional chunking used to process the logfiles on low memory machines.')
     parser.add_argument('--ignore-host', dest='ignore_host', action='append',
                         help='Host in the logs to be ignored, useful for internal ips, can be repeated')
     parser.add_argument('--ignore-method', dest='ignore_method', action='append',
@@ -41,8 +45,6 @@ def main():
                         help='Path in the logs to be ignored, useful for recurring API calls, can be repeated')
     parser.add_argument('--ignore-status', dest='ignore_status', action='append',
                         help='Status in the logs to be ignored, useful for 206, 404, can be repeated')
-    parser.add_argument('--chunking', dest='chunking', type=int, default=os.environ.get('CHUNKING'),
-                        help='Optional chunking used to process the logfiles on low memory machines.')
     parser.add_argument('--log-level', dest='log_level', default=os.environ.get('LOG_LEVEL', 'INFO'),
                         help='Log level (ERROR, WARN, INFO, or DEBUG)')
     parser.add_argument('--log-file', dest='log_file', default=os.environ.get('LOG_FILE'),

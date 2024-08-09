@@ -158,8 +158,10 @@ class LogParser:
             salt_date = date - timedelta(days=date.weekday())
         elif self.anon == 'monthly':
             salt_date = date - timedelta(days=date.day-1)
+        elif self.anon == 'eternally':
+            salt_date = date.fromtimestamp(0)
         else:
-            raise RuntimeError('anon must be one of (daily, weekly, monthly)')
+            raise RuntimeError('anon must be one of (daily, weekly, monthly, eternally)')
 
         salt = self.salt_map.get(salt_date)
         if salt is None:
