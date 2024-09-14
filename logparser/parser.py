@@ -165,7 +165,7 @@ class LogParser:
 
         salt = self.salt_map.get(salt_date)
         if salt is None:
-            salt_path = Path(self.salts) / str(salt_date)
+            salt_path = Path(self.salts).expanduser() / str(salt_date)
             if salt_path.exists():
                 salt = salt_path.read_text()
             else:
