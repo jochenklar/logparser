@@ -31,12 +31,13 @@ class LogParser:
 
     request_pattern = re.compile(r'(?P<method>[A-Z-]+) (?P<request>.*?) HTTP/(?P<http_version>.*)')
 
-    def __init__(self, host='localhost', anon=None, salts=None, geoip2_database=None):
+    def __init__(self, host='localhost', anon=None, noua=None, salts=None, geoip2_database=None):
         self.host = host
         self.host_map = {}
         self.salt_map = {}
 
         self.anon = anon
+        self.noua = noua
         self.salts = salts
 
         if geoip2_database:
@@ -124,8 +125,10 @@ class LogParser:
         return agent, parsed_agent.get_device(), parsed_agent.get_os(), parsed_agent.get_browser()
 
     def get_remote_host(self, remote_host, time, user_agent):
-        if self.anon is None:
+        if not self.anon:
             return remote_host
+        elif self.noua:
+            return get_sha1(self.get_salt(time) + remote_host)
         else:
             return get_sha1(self.get_salt(time) + remote_host + user_agent)
 

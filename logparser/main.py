@@ -37,6 +37,8 @@ def main():
                         help='Path where the salts for the anonymization are stored [default: salts]')
     parser.add_argument('-c|--chunking', dest='chunking', type=int, default=os.environ.get('CHUNKING'),
                         help='Optional chunking used to process the logfiles on low memory machines.')
+    parser.add_argument('--noua', dest='noua', action='store_true', default=False,
+                        help='Do not use the user agent to compute the anonymized remote host.')
     parser.add_argument('--ignore-host', dest='ignore_host', action='append',
                         help='Host in the logs to be ignored, useful for internal ips, can be repeated')
     parser.add_argument('--ignore-method', dest='ignore_method', action='append',
@@ -60,7 +62,8 @@ def main():
                         format='[%(asctime)s] %(levelname)s: %(message)s')
 
     # init LogParser
-    parser = LogParser(host=args.host, anon=args.anon, salts=args.salts, geoip2_database=args.geoip2_database)
+    parser = LogParser(host=args.host, anon=args.anon, noua=args.noua, salts=args.salts,
+                       geoip2_database=args.geoip2_database)
 
     for input_path in args.input_paths:
         # create output path for this input path
