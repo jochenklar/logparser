@@ -33,3 +33,6 @@ class LogEntry:
         data = asdict(self)
         data['time'] = data['time'].isoformat()
         return data
+
+    def __post_init__(self):
+        self.time = datetime.fromisoformat(self.time)
