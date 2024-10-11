@@ -35,4 +35,5 @@ class LogEntry:
         return data
 
     def __post_init__(self):
-        self.time = datetime.fromisoformat(self.time)
+        if isinstance(self.time, str):
+            self.time = datetime.fromisoformat(self.time)

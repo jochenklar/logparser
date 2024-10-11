@@ -14,8 +14,7 @@ class Writer:
         self.path = path
         self.database_settings = database_settings
 
-        self.log_lines = []
-        self.log_entries = []
+        self.rows = []
 
         self.current_date = None
         self.current_records = set()
@@ -33,12 +32,11 @@ class Writer:
                 self.writer.writeheader()
 
 
-    def append(self, log_line, log_entry):
-        self.log_lines.append(log_line)
-        self.log_entries.append(log_entry)
+    def append(self, row):
+        self.rows.append(row)
 
     def chunk(self):
-        return (self.chunking and len(self.log_entries) >= int(self.chunking))
+        return (self.chunking and len(self.rows) >= int(self.chunking))
 
     def write(self):
         if self.format == 'sql':
@@ -46,13 +44,18 @@ class Writer:
             self.session.commit()
 
         elif self.format in ['json', 'json.gz', 'json.xz']:
-            json.dump(self.log_entries, self.fp, indent=2)
-
+            self.fp.writelines([
+                json.dumps(row.serialize()) + '\n' for row in self.rows
+            ])
         elif self.format in ['csv', 'csv.gz', 'csv.xz']:
-            self.writer.writerows(self.log_entries)
-
+            self.writer.writerows([
+                row.serialize() for row in self.rows
+            ])
         else:
-            self.fp.writelines(self.log_lines)
+            self.fp.writelines(self.rows)
+
+        # reset row buffer
+        self.rows = []
 
     def close(self):
         if self.format == 'sql':

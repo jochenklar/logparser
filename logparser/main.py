@@ -54,9 +54,6 @@ def main():
 
     args = parser.parse_args()
 
-    if args.format in ['json', 'json.gz', 'json.xz'] and args.chunking:
-        raise RuntimeError('JSON output does not work with --chunking')
-
     # setup logging
     logging.basicConfig(level=args.log_level.upper(), filename=args.log_file,
                         format='[%(asctime)s] %(levelname)s: %(message)s')
@@ -105,10 +102,9 @@ def main():
                     continue
 
                 # append to buffer
-                writer.append(log_line, log_entry.serialize())
+                writer.append(log_entry if args.format else log_line)
                 if writer.chunk():
                     writer.write()
-                    writer.rows = []  # reset rows buffer
 
         # write the remaining output
         writer.write()
