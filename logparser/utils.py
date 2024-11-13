@@ -21,12 +21,16 @@ def open_log_file(log_path, mode='rt'):
     if mode.startswith('w'):
         log_path.parent.mkdir(exist_ok=True, parents=True)
 
+    kwargs = {}
+    if 'b' not in mode:
+        kwargs['encoding'] = 'utf-8'
+
     if log_path.suffix == '.gz':
-        return gzip.open(log_path, mode, encoding='utf-8')
+        return gzip.open(log_path, mode, **kwargs)
     elif log_path.suffix == '.xz':
-        return lzma.open(log_path, mode, encoding='utf-8')
+        return lzma.open(log_path, mode, **kwargs)
     else:
-        return open(log_path, mode)
+        return open(log_path, mode, **kwargs)
 
 
 def get_output_path(input_path, output_base_path, output_format=None):
