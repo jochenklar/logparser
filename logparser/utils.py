@@ -29,7 +29,7 @@ def open_log_file(log_path, mode='rt'):
         return open(log_path, mode)
 
 
-def get_output_path(input_path, output_base_path, output_format):
+def get_output_path(input_path, output_base_path, output_format=None):
     output_path = Path(output_base_path) / Path(input_path).name
     if output_format is None:
         return output_path
