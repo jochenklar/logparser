@@ -1,3 +1,4 @@
+import json
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 
@@ -33,6 +34,9 @@ class LogEntry:
         data = asdict(self)
         data['time'] = data['time'].isoformat()
         return data
+
+    def to_json(self):
+        return json.dumps(self.serialize()) + '\n'
 
     def __post_init__(self):
         if isinstance(self.time, str):

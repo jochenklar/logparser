@@ -1,5 +1,4 @@
 import csv
-import json
 from datetime import datetime
 
 from .models import LogEntry
@@ -45,7 +44,7 @@ class Writer:
 
         elif self.format in ['json', 'json.gz', 'json.xz']:
             self.fp.writelines([
-                json.dumps(row.serialize()) + '\n' for row in self.rows
+                row.to_json() for row in self.rows
             ])
         elif self.format in ['csv', 'csv.gz', 'csv.xz']:
             self.writer.writerows([
